@@ -39,19 +39,42 @@ jobs:
             fetch-xray: scripts/fetch-bundled-xray-windows-amd64.ps1
             fetch-mihomo: scripts/fetch-bundled-mihomo-windows-amd64.ps1
             tauri-config: src-tauri/tauri.windows.conf.json
-          # Linux amd64
+          # Linux amd64 — AppImage + deb on the Ubuntu runner
           - platform: ubuntu-latest
+            pm: apt
             target: x86_64-unknown-linux-gnu
             core-dir: linux-amd64
             fetch-core: scripts/fetch-bundled-core-linux-amd64.sh
             fetch-xray: scripts/fetch-bundled-xray-linux-amd64.sh
             fetch-mihomo: scripts/fetch-bundled-mihomo-linux-amd64.sh
             tauri-config: src-tauri/tauri.linux.conf.json
+          # Linux amd64 RPM — built inside a Fedora container on the Ubuntu
+          # runner. GitHub has no Fedora hosted runners, and an rpm linked on
+          # Ubuntu records Debian SONAMEs (e.g. libbz2.so.1.0) that do not
+          # exist on Fedora (libbz2.so.1); building in the container links
+          # Fedora's own libraries instead.
+          - platform: ubuntu-latest
+            container: fedora:latest
+            pm: dnf
+            target: x86_64-unknown-linux-gnu
+            core-dir: linux-amd64
+            fetch-core: scripts/fetch-bundled-core-linux-amd64.sh
+            fetch-xray: scripts/fetch-bundled-xray-linux-amd64.sh
+            fetch-mihomo: scripts/fetch-bundled-mihomo-linux-amd64.sh
+            tauri-config: src-tauri/tauri.linux-rpm.conf.json
 
     runs-on: ${{ matrix.platform }}
+    container: ${{ matrix.container }}
 
     steps:
       - uses: actions/checkout@v4
+
+      # Container jobs run as root (no sudo); rustup/node/pnpm downloads all
+      # need curl+ca-certificates before the setup actions run.
+      - name: Install container base tools
+        if: runner.os == 'Linux' && matrix.pm == 'dnf'
+        run: |
+          dnf install -y curl ca-certificates gcc make pkgconf-pkg-config
 
       - name: Verify tag matches package.json version
         if: github.ref_type == 'tag'
@@ -96,12 +119,18 @@ jobs:
           key: bundled-cores-${{ matrix.core-dir }}-${{ hashFiles(matrix.fetch-core, matrix.fetch-xray, matrix.fetch-mihomo, 'scripts/fetch-bundled-rule-sets.sh') }}
 
       - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.pm == 'apt'
         run: |
           sudo apt-get update
           # libayatana-appindicator3-dev conflicts with libappindicator3-dev on
           # Ubuntu; ayatana is also tauri-cli's first-choice detection target.
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Linux system dependencies (Fedora container)
+        if: runner.os == 'Linux' && matrix.pm == 'dnf'
+        run: |
+          dnf install -y webkit2gtk4.1-devel openssl-devel wget file libayatana-appindicator-gtk3-devel libappindicator-gtk3-devel librsvg2-devel libxdo-devel bzip2-devel
+          dnf group install -y "c-development"
 
       # The fetch scripts skip on their own when the pinned version is
       # already staged, so cache hits stay offline; misses go through

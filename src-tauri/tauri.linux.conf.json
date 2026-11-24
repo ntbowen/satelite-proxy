@@ -1,13 +1,10 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
-    "targets": ["appimage", "deb", "rpm"],
+    "targets": ["appimage", "deb"],
     "linux": {
       "deb": {
         "depends": ["libbz2-1.0"]
-      },
-      "rpm": {
-        "depends": ["libbz2.so.1.0()(64bit)"]
       }
     },
     "resources": [
