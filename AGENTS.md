@@ -35,7 +35,7 @@
 * **macOS Apple Silicon（M 系列）** → `aarch64.dmg`
 * **macOS Intel** → `x64.dmg`
 * **Windows 64 位** → `x64-setup.exe`
-* **Linux 64 位** → `amd64.AppImage`
+* **Linux 64 位** → `amd64.AppImage`（fork 另产 `amd64.deb` / `amd64.rpm`，见 §1 打包发布）
 
 根据你的系统和 CPU 架构选择对应安装包即可。
 
@@ -107,6 +107,8 @@ productName 加变体名**——它同时决定 Windows 安装目录与 WebView2
 **仅本地脚本**：`tauri.singbox-<平台>.conf.json` overlay 瘦身 resources 只含 sing-box，
 供 `--singbox-only`/`-SingboxOnly` 选用（体积敏感场景，产物同样叫 Satelite）。
 三入口切内核 UI 不受影响——未打包的内核可经设置页下载。
+
+**fork 差异（ntbowen/satelite-proxy）**：`release.yml` 在上游矩阵上追加 `fedora-latest` 项——ubuntu-latest 的 `tauri.linux.conf.json` targets 为 `["appimage","deb"]`（产 AppImage+.deb），fedora-latest 用 `tauri.linux-rpm.conf.json` 只产 `.rpm`（Tauri v2 rpm bundler 纯 Rust、无需 rpmbuild）；Linux 依赖安装按发行版拆 apt/dnf 两步，均装 ayatana-appindicator `-devel`（tray-icon 启用时 tauri-cli 经 pkg-config 检测 appindicator 库，缺失直接 panic）。
 ```
 
 CI 的三内核+规则集下载挂 `actions/cache`（path=`resources/bin/<平台>`+`resources/rule-sets`，key=对应平台 fetch 脚本内容 hash——升版本自动失效，命中即零外网下载），fetch 步骤统一经 `scripts/ci-fetch-with-retry.sh` 执行（3 次尝试/间隔 30s 退避，应对托管 runner 偶发连不上 github.com 的网络抖动；.ps1 自动用 pwsh 跑）；`windows-portable` job 用与 release Windows 条目相同的 key 复用缓存并预取。
@@ -151,7 +153,7 @@ scripts/memory-profile/                           # WebView2 内存剖析（CDP 
 - **内核**：sing-box（默认）、Xray 与 mihomo（`settings.core_type` 全局切换），均作为 bundled resource 随应用分发（**不是** Tauri sidecar；由应用代码解压/下载/拉起）。Xray 另需 geosite.dat/geoip.dat（v2ray 格式），Windows TUN 需 wintun.dll；mihomo（标准 Clash Meta）自带 Clash REST API，另需 `<data>/mihomo/` 下的 Country.mmdb + GeoSite.dat（MetaCubeX mrs 格式，**与 Xray 的同名 dat 不通用、注意 GeoSite.dat 大小写**）；Windows TUN 用 `bin/wintun.dll`（与 Xray 共用）
 - **后端**：Rust（`src-tauri/`），负责订阅解析、三内核配置生成、内核生命周期、系统代理、托盘、规则/DNS/连接数据
 - **前端**：React 19 + TS + Vite（`src/`），玻璃拟态 UI，无路由库、无状态管理库、无 CSS 框架
-- **平台**：macOS (arm64/amd64) + Windows x64 + Linux (amd64, AppImage)
+- **平台**：macOS (arm64/amd64) + Windows x64 + Linux (amd64, AppImage/.deb/.rpm)
 - **包管理**：pnpm；前端端口 1420（strictPort）
 - 语言：UI 中英双语（zh 默认）；代码注释中英混合
 
