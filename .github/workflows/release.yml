@@ -47,14 +47,6 @@ jobs:
             fetch-xray: scripts/fetch-bundled-xray-linux-amd64.sh
             fetch-mihomo: scripts/fetch-bundled-mihomo-linux-amd64.sh
             tauri-config: src-tauri/tauri.linux.conf.json
-          # Linux amd64 RPM — built natively on Fedora (rpm bundle only)
-          - platform: fedora-latest
-            target: x86_64-unknown-linux-gnu
-            core-dir: linux-amd64
-            fetch-core: scripts/fetch-bundled-core-linux-amd64.sh
-            fetch-xray: scripts/fetch-bundled-xray-linux-amd64.sh
-            fetch-mihomo: scripts/fetch-bundled-mihomo-linux-amd64.sh
-            tauri-config: src-tauri/tauri.linux-rpm.conf.json
 
     runs-on: ${{ matrix.platform }}
 
@@ -103,19 +95,13 @@ jobs:
             src-tauri/resources/rule-sets
           key: bundled-cores-${{ matrix.core-dir }}-${{ hashFiles(matrix.fetch-core, matrix.fetch-xray, matrix.fetch-mihomo, 'scripts/fetch-bundled-rule-sets.sh') }}
 
-      - name: Install Linux system dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           # libayatana-appindicator3-dev conflicts with libappindicator3-dev on
           # Ubuntu; ayatana is also tauri-cli's first-choice detection target.
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-
-      - name: Install Linux system dependencies (Fedora)
-        if: matrix.platform == 'fedora-latest'
-        run: |
-          sudo dnf install -y webkit2gtk4.1-devel openssl-devel curl wget file libayatana-appindicator-gtk3-devel libappindicator-gtk3-devel librsvg2-devel libxdo-devel
-          sudo dnf group install -y "c-development"
 
       # The fetch scripts skip on their own when the pinned version is
       # already staged, so cache hits stay offline; misses go through

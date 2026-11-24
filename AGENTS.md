@@ -108,7 +108,7 @@ productName 加变体名**——它同时决定 Windows 安装目录与 WebView2
 供 `--singbox-only`/`-SingboxOnly` 选用（体积敏感场景，产物同样叫 Satelite）。
 三入口切内核 UI 不受影响——未打包的内核可经设置页下载。
 
-**fork 差异（ntbowen/satelite-proxy）**：`release.yml` 在上游矩阵上追加 `fedora-latest` 项——ubuntu-latest 的 `tauri.linux.conf.json` targets 为 `["appimage","deb"]`（产 AppImage+.deb），fedora-latest 用 `tauri.linux-rpm.conf.json` 只产 `.rpm`（Tauri v2 rpm bundler 纯 Rust、无需 rpmbuild）；Linux 依赖安装按发行版拆 apt/dnf 两步，均装 ayatana-appindicator `-devel`（tray-icon 启用时 tauri-cli 经 pkg-config 检测 appindicator 库，缺失直接 panic）。
+**fork 差异（ntbowen/satelite-proxy）**：`tauri.linux.conf.json` targets 在上游 `["appimage"]` 基础上扩为 `["appimage","deb","rpm"]`——ubuntu-latest 单 job 一次编译产 AppImage+.deb+.rpm（GitHub 无 Fedora hosted runner，Tauri v2 rpm bundler 纯 Rust 无需 rpmbuild，Ubuntu 上构建的 rpm 与 Fedora 等价且 glibc 下限更低）；Linux 依赖安装改用 `libayatana-appindicator3-dev` 单装（与 `libappindicator3-dev` 在 Ubuntu 上互斥，且 ayatana 是 tauri-cli 检测首选——tray-icon 启用时缺 appindicator `.pc` 会直接 panic）；另加 `workflow_dispatch` 手动触发（只构建传 artifact、不建 Release）。
 ```
 
 CI 的三内核+规则集下载挂 `actions/cache`（path=`resources/bin/<平台>`+`resources/rule-sets`，key=对应平台 fetch 脚本内容 hash——升版本自动失效，命中即零外网下载），fetch 步骤统一经 `scripts/ci-fetch-with-retry.sh` 执行（3 次尝试/间隔 30s 退避，应对托管 runner 偶发连不上 github.com 的网络抖动；.ps1 自动用 pwsh 跑）；`windows-portable` job 用与 release Windows 条目相同的 key 复用缓存并预取。
