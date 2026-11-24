@@ -132,7 +132,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Satelite ${{ github.ref_name }}"
           releaseBody: "Automatic release"
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: --target ${{ matrix.target }} --config ${{ matrix.tauri-config }}
 
