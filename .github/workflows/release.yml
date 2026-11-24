@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -61,6 +62,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Verify tag matches package.json version
+        if: github.ref_type == 'tag'
         shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
@@ -126,7 +128,8 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri
+      - name: Build Tauri (tag release)
+        if: github.ref_type == 'tag'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -145,7 +148,20 @@ jobs:
           prerelease: false
           args: --target ${{ matrix.target }} --config ${{ matrix.tauri-config }}
 
+      # workflow_dispatch runs build the same bundles but skip release
+      # creation; artifacts land on the Actions run page instead.
+      - name: Build Tauri (manual dispatch)
+        if: github.ref_type != 'tag'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COPYFILE_DISABLE: "1"
+        with:
+          uploadWorkflowArtifacts: true
+          args: --target ${{ matrix.target }} --config ${{ matrix.tauri-config }}
+
   windows-portable:
+    if: github.ref_type == 'tag'
     needs: release
     runs-on: windows-latest
 
