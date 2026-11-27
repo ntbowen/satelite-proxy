@@ -844,19 +844,22 @@ impl AppState {
     /// the whole UI). Doing it here means only this one call is exposed to
     /// that latency; the store snapshot used to decide is read-and-released
     /// up front, so it never contends with the slow part.
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     fn pre_authorize_setuid_if_needed(&self, resource_dir: Option<&Path>) -> AppResult<()> {
         let pending = {
             let store = self.lock_store();
             crate::runtime::resolve_pending_elevation(&self.app_data_dir, resource_dir, &store)
         };
         if let Some(bin) = pending {
+            #[cfg(target_os = "macos")]
             crate::core::ensure_core_setuid(&bin)?;
+            #[cfg(target_os = "linux")]
+            crate::core::ensure_core_cap_net_admin(&bin)?;
         }
         Ok(())
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     fn pre_authorize_setuid_if_needed(&self, _resource_dir: Option<&Path>) -> AppResult<()> {
         Ok(())
     }
