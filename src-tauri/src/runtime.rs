@@ -287,11 +287,7 @@ pub fn resolve_pending_elevation(
     }
     let (bin, _src) = resolve_core_bin(app_data_dir, resource_dir, kind);
     let bin = bin?;
-    #[cfg(target_os = "macos")]
-    let already_elevated = crate::core::core_has_setuid(&bin);
-    #[cfg(target_os = "linux")]
-    let already_elevated = crate::core::core_has_cap_net_admin(&bin);
-    if already_elevated {
+    if crate::core::core_has_setuid(&bin) {
         return None;
     }
     Some(bin)

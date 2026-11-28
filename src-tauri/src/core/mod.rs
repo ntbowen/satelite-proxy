@@ -12,7 +12,7 @@ mod macos_auth;
 #[cfg(target_os = "macos")]
 pub mod macos_net;
 #[cfg(target_os = "linux")]
-pub use linux_auth::{core_has_cap_net_admin, ensure_core_cap_net_admin};
+pub use linux_auth::{core_has_setuid, ensure_core_setuid};
 #[cfg(target_os = "macos")]
 pub use macos_auth::{core_has_setuid, ensure_core_setuid};
 pub mod manager;

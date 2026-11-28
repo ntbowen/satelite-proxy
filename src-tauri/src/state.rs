@@ -851,10 +851,7 @@ impl AppState {
             crate::runtime::resolve_pending_elevation(&self.app_data_dir, resource_dir, &store)
         };
         if let Some(bin) = pending {
-            #[cfg(target_os = "macos")]
             crate::core::ensure_core_setuid(&bin)?;
-            #[cfg(target_os = "linux")]
-            crate::core::ensure_core_cap_net_admin(&bin)?;
         }
         Ok(())
     }
