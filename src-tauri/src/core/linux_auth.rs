@@ -69,8 +69,13 @@ pub fn ensure_core_setuid(core: &Path) -> AppResult<()> {
     // needs no special mount properties: pkexec runs it as root regardless.
     let uniq = format!("satelite-elevate-{}", std::process::id());
     let script_tmp = std::env::temp_dir().join(format!("{uniq}.sh"));
+    // `setcap -r` first: a leftover file-capability xattr CONSTRAINS a
+    // setuid-root process to exactly those caps (kernel rule), stripping
+    // cap_dac_override — the core then fails to read the config tree under
+    // the user's 0700 home. Not fatal when absent, hence `|| true`.
     let script = format!(
-        "#!/bin/sh\nset -e\nchown root:root '{}'\nchmod u+s '{}'\n",
+        "#!/bin/sh\nset -e\nsetcap -r '{}' 2>/dev/null || true\nchown root:root '{}'\nchmod u+s '{}'\n",
+        shell_escape(&core.to_string_lossy()),
         shell_escape(&core.to_string_lossy()),
         shell_escape(&core.to_string_lossy()),
     );
